@@ -18,6 +18,9 @@ export function loadTree(): FamilyTreeData {
     if (!parsed || typeof parsed !== 'object' || !parsed.people) {
       throw new Error('Invalid tree data shape');
     }
+    if (!Array.isArray(parsed.partnerships)) {
+      parsed.partnerships = [];
+    }
     return parsed;
   } catch {
     const seed = getSeedData();
@@ -47,6 +50,9 @@ export function parseImportedTree(text: string): FamilyTreeData {
   const parsed = JSON.parse(text);
   if (!parsed || typeof parsed !== 'object' || typeof parsed.people !== 'object') {
     throw new Error('File does not contain valid family tree data.');
+  }
+  if (!Array.isArray(parsed.partnerships)) {
+    parsed.partnerships = [];
   }
   return parsed as FamilyTreeData;
 }

@@ -258,13 +258,15 @@ button:disabled {
   left: 50%;
   transform: translateX(-50%);
   display: flex;
+  flex-wrap: wrap;
   gap: 0.35rem;
   padding: 0.35rem;
+  width: max-content;
+  max-width: 220px;
   background: var(--surface);
   border: 1px solid var(--border-subtle);
   border-radius: 8px;
   box-shadow: 0 4px 14px var(--shadow);
-  white-space: nowrap;
   z-index: 30;
 }
 
@@ -272,6 +274,11 @@ button:disabled {
   padding: 0.4rem 0.6rem;
   font-size: 0.8rem;
   min-height: 32px;
+}
+
+.partner-junction {
+  border-radius: 50%;
+  background: var(--text-secondary);
 }
 
 /* Modal */
@@ -378,6 +385,68 @@ textarea {
 .modal__parents {
   font-size: 0.85rem;
   color: var(--text-secondary);
+}
+
+.modal__partners {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.modal__partner-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.modal__partner-row button:not(.link-button) {
+  padding: 0.3rem 0.55rem;
+  font-size: 0.78rem;
+  min-height: auto;
+}
+
+.partner-status {
+  font-size: 0.78rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--avatar-bg);
+  color: var(--text-secondary);
+}
+
+.partner-status--divorced {
+  color: var(--danger);
+}
+
+.modal__children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.modal__children-label {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.children-reorder__row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--surface);
+}
+
+.children-reorder__handle {
+  cursor: grab;
+  padding: 0.2rem 0.4rem;
+  min-height: auto;
+  color: var(--text-secondary);
+  touch-action: none;
 }
 
 .modal__actions {

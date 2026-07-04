@@ -9,8 +9,8 @@ interface Props {
 }
 
 export default function DataModal({ onClose }: Props) {
-  const { people, replaceAll } = useFamilyTree();
-  const [text, setText] = useState(() => JSON.stringify({ people }, null, 2));
+  const { people, partnerships, replaceAll } = useFamilyTree();
+  const [text, setText] = useState(() => JSON.stringify({ people, partnerships }, null, 2));
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -25,7 +25,7 @@ export default function DataModal({ onClose }: Props) {
   }
 
   function handleDownload() {
-    exportTreeAsFile({ people });
+    exportTreeAsFile({ people, partnerships });
   }
 
   function handleLoadFileClick() {

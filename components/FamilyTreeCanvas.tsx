@@ -6,8 +6,9 @@ import '@xyflow/react/dist/style.css';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
 import { layoutTree } from '@/lib/layout';
 import PersonNode from './PersonNode';
+import PartnerJunctionNode from './PartnerJunctionNode';
 
-const nodeTypes = { person: PersonNode };
+const nodeTypes = { person: PersonNode, junction: PartnerJunctionNode };
 
 export interface FocusRequest {
   id: string;
@@ -20,8 +21,8 @@ interface Props {
 }
 
 export default function FamilyTreeCanvas({ onEditPerson, focusRequest }: Props) {
-  const { people } = useFamilyTree();
-  const layout = useMemo(() => layoutTree(people), [people]);
+  const { people, partnerships } = useFamilyTree();
+  const layout = useMemo(() => layoutTree(people, partnerships), [people, partnerships]);
   const [nodes, setNodes, onNodesChange] = useNodesState(layout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layout.edges);
   const flowRef = useRef<ReactFlowInstance | null>(null);
@@ -70,6 +71,7 @@ export default function FamilyTreeCanvas({ onEditPerson, focusRequest }: Props) 
         fitView
         minZoom={0.1}
         colorMode="system"
+        proOptions={{ hideAttribution: true }}
       >
         <Background />
         <Controls showInteractive={false} />

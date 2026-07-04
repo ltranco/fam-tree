@@ -21,11 +21,14 @@ function yearOf(dateStr: string): string {
 interface PersonNodeData {
   person: Person;
   onEdit: (id: string) => void;
+  hasPartnerSourceHandle: boolean;
+  hasPartnerTargetHandle: boolean;
+  hasChildSourceHandle: boolean;
 }
 
 export default function PersonNode({ data, selected }: { data: PersonNodeData; selected: boolean }) {
-  const { person, onEdit } = data;
-  const { people, addChild, addParent, deletePerson } = useFamilyTree();
+  const { person, onEdit, hasPartnerSourceHandle, hasPartnerTargetHandle, hasChildSourceHandle } = data;
+  const { people, addChild, addParent, addPartner, deletePerson } = useFamilyTree();
   const birthYear = yearOf(person.birthDate);
   const deathYear = yearOf(person.deathDate);
   const dateRange = birthYear || deathYear ? `${birthYear || '?'} – ${deathYear || (birthYear ? 'present' : '?')}` : '';
@@ -34,7 +37,7 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
   function handleDelete() {
     if (childCount > 0) {
       const ok = window.confirm(
-        `${person.firstName} has ${childCount} child${childCount > 1 ? 'ren' : ''} on record. Deleting will remove this person as their parent, but the children stay. Continue?`
+        `${person.firstName} has ${childCount} child${childCount > 1 ? 'ren' : ''} on record. Deleting will replace them with a placeholder parent so the child${childCount > 1 ? 'ren keep' : ' keeps'} both parent slots. Continue?`
       );
       if (!ok) return;
     }
@@ -47,7 +50,9 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
       style={{ width: NODE_WIDTH, height: NODE_HEIGHT }}
       data-testid="person-node"
     >
-      <Handle type="target" position={Position.Top} />
+      {person.parentIds.length > 0 && <Handle type="target" position={Position.Top} id="child-target" />}
+      {hasPartnerSourceHandle && <Handle type="source" position={Position.Right} id="partner-source" />}
+      {hasPartnerTargetHandle && <Handle type="target" position={Position.Left} id="partner-target" />}
       <div className="person-node__avatar">
         {person.photoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -60,7 +65,7 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
         <div className="person-node__name">{fullName(person) || 'Unnamed'}</div>
         {dateRange && <div className="person-node__dates">{dateRange}</div>}
       </div>
-      <Handle type="source" position={Position.Bottom} />
+      {hasChildSourceHandle && <Handle type="source" position={Position.Bottom} id="child-source" />}
 
       {selected && (
         <div className="person-node__quickmenu nodrag nopan" onClick={(e) => e.stopPropagation()}>
@@ -76,6 +81,9 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
             onClick={() => addParent(person.id)}
           >
             + Parent
+          </button>
+          <button title="Add partner" onClick={() => addPartner(person.id)}>
+            + Partner
           </button>
           <button title="Delete" className="danger" onClick={handleDelete}>
             Delete

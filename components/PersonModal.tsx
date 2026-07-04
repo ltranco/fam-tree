@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Person } from '@/lib/types';
+import { Partnership, Person } from '@/lib/types';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
+import ChildrenReorderList from './ChildrenReorderList';
 
 interface Props {
   personId: string;
@@ -11,7 +12,8 @@ interface Props {
 }
 
 export default function PersonModal({ personId, onClose, onNavigateToPerson }: Props) {
-  const { people, updatePerson, addChild, addParent, deletePerson } = useFamilyTree();
+  const { people, partnerships, updatePerson, addChild, addParent, addPartner, setPartnershipStatus, deletePerson } =
+    useFamilyTree();
   const person = people[personId];
   const [form, setForm] = useState<Person | null>(person ?? null);
 
@@ -23,6 +25,13 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
 
   const parents = form.parentIds.map((id) => people[id]).filter(Boolean);
   const childCount = Object.values(people).filter((p) => p.parentIds.includes(personId)).length;
+  const myPartnerships: { partnership: Partnership; otherPerson: Person }[] = partnerships
+    .filter((partnership) => partnership.partnerIds.includes(personId))
+    .map((partnership) => {
+      const otherId = partnership.partnerIds.find((id) => id !== personId)!;
+      return { partnership, otherPerson: people[otherId] };
+    })
+    .filter((entry) => Boolean(entry.otherPerson));
 
   function handleChange<K extends keyof Person>(key: K, value: Person[K]) {
     setForm((prev) => (prev ? { ...prev, [key]: value } : prev));
@@ -52,11 +61,16 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
     if (newId) onNavigateToPerson(newId);
   }
 
+  function handleAddPartner() {
+    const newId = addPartner(personId);
+    onNavigateToPerson(newId);
+  }
+
   function handleDelete() {
     if (!form) return;
     if (childCount > 0) {
       const ok = window.confirm(
-        `${form.firstName} has ${childCount} child${childCount > 1 ? 'ren' : ''} on record. Deleting will remove this person as their parent, but the children stay. Continue?`
+        `${form.firstName} has ${childCount} child${childCount > 1 ? 'ren' : ''} on record. Deleting will replace them with a placeholder parent so the child${childCount > 1 ? 'ren keep' : ' keeps'} both parent slots. Continue?`
       );
       if (!ok) return;
     }
@@ -152,6 +166,34 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               ))}
             </div>
           )}
+
+          {myPartnerships.length > 0 && (
+            <div className="modal__partners">
+              Partners:
+              {myPartnerships.map(({ partnership, otherPerson }) => (
+                <div key={partnership.id} className="modal__partner-row">
+                  <button className="link-button" onClick={() => onNavigateToPerson(otherPerson.id)}>
+                    {otherPerson.firstName} {otherPerson.lastName}
+                  </button>
+                  <span className={`partner-status${partnership.status === 'divorced' ? ' partner-status--divorced' : ''}`}>
+                    {partnership.status === 'divorced' ? 'Divorced' : 'Together'}
+                  </span>
+                  <button
+                    onClick={() =>
+                      setPartnershipStatus(
+                        partnership.id,
+                        partnership.status === 'divorced' ? 'together' : 'divorced'
+                      )
+                    }
+                  >
+                    {partnership.status === 'divorced' ? 'Mark together' : 'Mark divorced'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <ChildrenReorderList parentId={personId} onNavigateToPerson={onNavigateToPerson} />
         </div>
 
         <div className="modal__actions">
@@ -159,6 +201,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
           <button onClick={handleAddParent} disabled={form.parentIds.length >= 2}>
             + Add parent
           </button>
+          <button onClick={handleAddPartner}>+ Add partner</button>
           <button className="danger" onClick={handleDelete}>
             Delete
           </button>

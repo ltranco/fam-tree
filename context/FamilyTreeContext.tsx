@@ -1,27 +1,31 @@
 'use client';
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { FamilyTreeData, Person } from '@/lib/types';
+import { FamilyTreeData, Partnership, PartnershipStatus, Person } from '@/lib/types';
 import { loadTree, saveTree } from '@/lib/storage';
 import { wouldCreateCycle } from '@/lib/relationships';
 
 interface FamilyTreeContextValue {
   people: Record<string, Person>;
+  partnerships: Partnership[];
   ready: boolean;
   updatePerson: (id: string, updates: Partial<Omit<Person, 'id' | 'parentIds'>>) => void;
   addChild: (parentId: string) => string;
   addParent: (childId: string) => string | null;
+  addPartner: (personId: string) => string;
+  setPartnershipStatus: (partnershipId: string, status: PartnershipStatus) => void;
+  reorderChildren: (parentId: string, orderedChildIds: string[]) => void;
   deletePerson: (id: string) => void;
   replaceAll: (data: FamilyTreeData) => void;
 }
 
 const FamilyTreeContext = createContext<FamilyTreeContextValue | null>(null);
 
-function makeId(): string {
-  return `person-${Math.random().toString(36).slice(2, 10)}`;
+function makeId(prefix: string): string {
+  return `${prefix}-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function emptyPerson(id: string, parentIds: string[] = []): Person {
+function emptyPerson(id: string, parentIds: string[] = [], order = 0): Person {
   return {
     id,
     firstName: 'New',
@@ -32,23 +36,40 @@ function emptyPerson(id: string, parentIds: string[] = []): Person {
     photoUrl: '',
     notes: '',
     parentIds,
+    order,
   };
+}
+
+function nextSiblingOrder(people: Record<string, Person>, parentId: string): number {
+  const siblingOrders = Object.values(people)
+    .filter((p) => p.parentIds.includes(parentId))
+    .map((p) => p.order);
+  return siblingOrders.length ? Math.max(...siblingOrders) + 1 : 0;
+}
+
+/** The one unambiguous current partner to attach a new child to, if any. */
+function currentPartnerId(partnerships: Partnership[], personId: string): string | null {
+  const together = partnerships.filter((p) => p.partnerIds.includes(personId) && p.status === 'together');
+  if (together.length !== 1) return null;
+  return together[0].partnerIds.find((id) => id !== personId) ?? null;
 }
 
 export function FamilyTreeProvider({ children }: { children: React.ReactNode }) {
   const [people, setPeople] = useState<Record<string, Person>>({});
+  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const data = loadTree();
     setPeople(data.people);
+    setPartnerships(data.partnerships);
     setReady(true);
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    saveTree({ people });
-  }, [people, ready]);
+    saveTree({ people, partnerships });
+  }, [people, partnerships, ready]);
 
   const updatePerson = useCallback((id: string, updates: Partial<Omit<Person, 'id' | 'parentIds'>>) => {
     setPeople((prev) => {
@@ -58,52 +79,164 @@ export function FamilyTreeProvider({ children }: { children: React.ReactNode }) 
     });
   }, []);
 
-  const addChild = useCallback((parentId: string) => {
-    const id = makeId();
-    setPeople((prev) => ({ ...prev, [id]: emptyPerson(id, [parentId]) }));
-    return id;
-  }, []);
+  // A descendant always has exactly two parents. If the clicked person has
+  // no single unambiguous current partner on record, one is created on the
+  // spot (with the matching partnership) so the child is never left with
+  // just one parent.
+  const addChild = useCallback(
+    (parentId: string) => {
+      const childId = makeId('person');
+      const existingPartnerId = currentPartnerId(partnerships, parentId);
+      const partnerId = existingPartnerId ?? makeId('person');
+      const partnershipId = makeId('partner');
 
+      setPeople((prev) => {
+        const next = { ...prev };
+        if (!existingPartnerId) next[partnerId] = emptyPerson(partnerId);
+        next[childId] = emptyPerson(childId, [parentId, partnerId], nextSiblingOrder(prev, parentId));
+        return next;
+      });
+
+      if (!existingPartnerId) {
+        setPartnerships((prev) => [
+          ...prev,
+          { id: partnershipId, partnerIds: [parentId, partnerId], status: 'together' },
+        ]);
+      }
+
+      return childId;
+    },
+    [partnerships]
+  );
+
+  // Bringing a child from 1 recorded parent up to 2 must also record the
+  // partnership between them, otherwise the child would have two parents
+  // with no joint connector to render from. Every id used below is
+  // generated up front, outside the setState updaters: this repo runs with
+  // reactStrictMode, which double-invokes updater functions in development
+  // to surface impure ones — generating ids inside an updater (as this used
+  // to) meant each invocation could mint a different random id, leaving the
+  // committed person and the committed partnership pointing at two
+  // different, non-matching ids.
   const addParent = useCallback(
     (childId: string): string | null => {
-      let newId: string | null = null;
+      const child = people[childId];
+      if (!child || child.parentIds.length >= 2) return null;
+      const id = makeId('person');
+      if (wouldCreateCycle(people, childId, id)) return null;
+
       setPeople((prev) => {
-        const child = prev[childId];
-        if (!child || child.parentIds.length >= 2) return prev;
-        const id = makeId();
-        if (wouldCreateCycle(prev, childId, id)) return prev;
-        newId = id;
+        const current = prev[childId];
+        if (!current || current.parentIds.length >= 2) return prev;
         return {
           ...prev,
           [id]: emptyPerson(id),
-          [childId]: { ...child, parentIds: [...child.parentIds, id] },
+          [childId]: { ...current, parentIds: [...current.parentIds, id] },
         };
       });
-      return newId;
+
+      if (child.parentIds.length === 1) {
+        const partnershipId = makeId('partner');
+        setPartnerships((prev) => [
+          ...prev,
+          { id: partnershipId, partnerIds: [child.parentIds[0], id], status: 'together' },
+        ]);
+      }
+
+      return id;
     },
-    []
+    [people]
   );
 
-  const deletePerson = useCallback((id: string) => {
+  const addPartner = useCallback((personId: string): string => {
+    const newId = makeId('person');
+    const partnershipId = makeId('partner');
+    setPeople((prev) => ({ ...prev, [newId]: emptyPerson(newId) }));
+    setPartnerships((prev) => [...prev, { id: partnershipId, partnerIds: [personId, newId], status: 'together' }]);
+    return newId;
+  }, []);
+
+  const setPartnershipStatus = useCallback((partnershipId: string, status: PartnershipStatus) => {
+    setPartnerships((prev) => prev.map((p) => (p.id === partnershipId ? { ...p, status } : p)));
+  }, []);
+
+  const reorderChildren = useCallback((parentId: string, orderedChildIds: string[]) => {
     setPeople((prev) => {
-      const next: Record<string, Person> = {};
-      for (const [personId, person] of Object.entries(prev)) {
-        if (personId === id) continue;
-        next[personId] = person.parentIds.includes(id)
-          ? { ...person, parentIds: person.parentIds.filter((pid) => pid !== id) }
-          : person;
-      }
+      const next = { ...prev };
+      orderedChildIds.forEach((childId, index) => {
+        const child = next[childId];
+        if (child) next[childId] = { ...child, order: index };
+      });
       return next;
     });
   }, []);
 
+  // Deleting someone who is a recorded parent must never drop their
+  // children to a single parent. Replace them everywhere (as a parent and
+  // as a partner) with a fresh placeholder, so every child keeps exactly
+  // two parents and the joint connector to the remaining partner survives.
+  const deletePerson = useCallback(
+    (id: string) => {
+      const isParentOfSomeone = Object.values(people).some((p) => p.parentIds.includes(id));
+      const placeholderId = isParentOfSomeone ? makeId('person') : null;
+
+      setPeople((prev) => {
+        const next: Record<string, Person> = {};
+        for (const [personId, person] of Object.entries(prev)) {
+          if (personId === id) continue;
+          next[personId] =
+            placeholderId && person.parentIds.includes(id)
+              ? { ...person, parentIds: person.parentIds.map((pid) => (pid === id ? placeholderId : pid)) }
+              : person;
+        }
+        if (placeholderId) next[placeholderId] = emptyPerson(placeholderId);
+        return next;
+      });
+
+      setPartnerships((prev) => {
+        if (!placeholderId) return prev.filter((p) => !p.partnerIds.includes(id));
+        return prev.map((p) =>
+          p.partnerIds.includes(id)
+            ? { ...p, partnerIds: p.partnerIds.map((pid) => (pid === id ? placeholderId : pid)) as [string, string] }
+            : p
+        );
+      });
+    },
+    [people]
+  );
+
   const replaceAll = useCallback((data: FamilyTreeData) => {
     setPeople(data.people);
+    setPartnerships(data.partnerships);
   }, []);
 
   const value = useMemo(
-    () => ({ people, ready, updatePerson, addChild, addParent, deletePerson, replaceAll }),
-    [people, ready, updatePerson, addChild, addParent, deletePerson, replaceAll]
+    () => ({
+      people,
+      partnerships,
+      ready,
+      updatePerson,
+      addChild,
+      addParent,
+      addPartner,
+      setPartnershipStatus,
+      reorderChildren,
+      deletePerson,
+      replaceAll,
+    }),
+    [
+      people,
+      partnerships,
+      ready,
+      updatePerson,
+      addChild,
+      addParent,
+      addPartner,
+      setPartnershipStatus,
+      reorderChildren,
+      deletePerson,
+      replaceAll,
+    ]
   );
 
   return <FamilyTreeContext.Provider value={value}>{children}</FamilyTreeContext.Provider>;
