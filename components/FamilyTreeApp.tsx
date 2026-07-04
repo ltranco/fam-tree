@@ -1,63 +1,34 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { FamilyTreeProvider, useFamilyTree } from '@/context/FamilyTreeContext';
-import { exportTreeAsFile, parseImportedTree } from '@/lib/storage';
 import FamilyTreeCanvas, { FocusRequest } from './FamilyTreeCanvas';
 import PersonModal from './PersonModal';
 import SearchBar from './SearchBar';
-
-function Toolbar() {
-  const { people, replaceAll } = useFamilyTree();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  function handleExport() {
-    exportTreeAsFile({ people });
-  }
-
-  function handleImportClick() {
-    fileInputRef.current?.click();
-  }
-
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = parseImportedTree(text);
-      replaceAll(data);
-    } catch (err) {
-      window.alert(err instanceof Error ? err.message : 'Failed to import file.');
-    }
-  }
-
-  return (
-    <div className="toolbar">
-      <h1 className="toolbar__title">Family Tree</h1>
-      <div className="toolbar__actions">
-        <button onClick={handleExport}>Export JSON</button>
-        <button onClick={handleImportClick}>Import JSON</button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="application/json"
-          hidden
-          onChange={handleFileChange}
-        />
-      </div>
-    </div>
-  );
-}
+import DataModal from './DataModal';
 
 function FamilyTreeAppInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [dataModalOpen, setDataModalOpen] = useState(false);
   const { ready } = useFamilyTree();
 
-  function focusPerson(id: string) {
-    setSelectedId(id);
+  useEffect(() => {
+    function handleKeydown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'f') {
+        e.preventDefault();
+        setSearchOpen(true);
+      } else if (e.key === 'Escape') {
+        setSearchOpen(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
+  }, []);
+
+  function panToPerson(id: string) {
     setFocusRequest({ id, nonce: Date.now() });
   }
 
@@ -67,20 +38,38 @@ function FamilyTreeAppInner() {
 
   return (
     <div className="app-shell">
-      <Toolbar />
-      <div className="app-search">
-        <SearchBar onSelect={focusPerson} />
+      <div className="floating-actions">
+        <button
+          className={searchOpen ? 'active' : ''}
+          onClick={() => setSearchOpen((v) => !v)}
+          title="Search (Ctrl/Cmd+F)"
+        >
+          Search
+        </button>
+        <button onClick={() => setDataModalOpen(true)}>JSON</button>
       </div>
-      <div className="app-canvas">
-        <FamilyTreeCanvas onSelectPerson={focusPerson} focusRequest={focusRequest} />
-      </div>
-      {selectedId && (
-        <PersonModal
-          personId={selectedId}
-          onClose={() => setSelectedId(null)}
-          onFocusPerson={focusPerson}
-        />
+
+      {searchOpen && (
+        <div className="app-search">
+          <SearchBar
+            onSelect={(id) => {
+              panToPerson(id);
+              setSearchOpen(false);
+            }}
+            onClose={() => setSearchOpen(false)}
+          />
+        </div>
       )}
+
+      <div className="app-canvas">
+        <FamilyTreeCanvas onEditPerson={setSelectedId} focusRequest={focusRequest} />
+      </div>
+
+      {selectedId && (
+        <PersonModal personId={selectedId} onClose={() => setSelectedId(null)} onNavigateToPerson={setSelectedId} />
+      )}
+
+      {dataModalOpen && <DataModal onClose={() => setDataModalOpen(false)} />}
     </div>
   );
 }

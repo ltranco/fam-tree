@@ -1,15 +1,7 @@
 'use client';
 
 import React, { useEffect, useMemo, useRef } from 'react';
-import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
-  ReactFlowInstance,
-  useEdgesState,
-  useNodesState,
-} from '@xyflow/react';
+import { Background, Controls, ReactFlow, ReactFlowInstance, useEdgesState, useNodesState } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
 import { layoutTree } from '@/lib/layout';
@@ -23,33 +15,38 @@ export interface FocusRequest {
 }
 
 interface Props {
-  onSelectPerson: (id: string) => void;
+  onEditPerson: (id: string) => void;
   focusRequest: FocusRequest | null;
 }
 
-export default function FamilyTreeCanvas({ onSelectPerson, focusRequest }: Props) {
+export default function FamilyTreeCanvas({ onEditPerson, focusRequest }: Props) {
   const { people } = useFamilyTree();
   const layout = useMemo(() => layoutTree(people), [people]);
   const [nodes, setNodes, onNodesChange] = useNodesState(layout.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(layout.edges);
   const flowRef = useRef<ReactFlowInstance | null>(null);
+  const handledNonceRef = useRef<number | null>(null);
 
   useEffect(() => {
-    setNodes(layout.nodes);
+    setNodes(layout.nodes.map((node) => ({ ...node, data: { ...node.data, onEdit: onEditPerson } })));
     setEdges(layout.edges);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layout, setNodes, setEdges]);
 
-  // Runs after `nodes` has settled, so a just-added node is guaranteed present.
+  // Only ever pans in response to an explicit new focusRequest (e.g. search selection) —
+  // never as a side effect of node selection or other unrelated nodes-array updates.
   useEffect(() => {
     if (!focusRequest || !flowRef.current) return;
+    if (handledNonceRef.current === focusRequest.nonce) return;
     const node = nodes.find((n) => n.id === focusRequest.id);
-    if (!node) return;
+    if (!node) return; // wait for the node to appear (e.g. just created), retry on next nodes update
+    handledNonceRef.current = focusRequest.nonce;
+    const zoom = flowRef.current.getZoom();
     flowRef.current.setCenter(
       node.position.x + (node.measured?.width ?? 200) / 2,
       node.position.y + (node.measured?.height ?? 90) / 2,
-      { zoom: 1.25, duration: 600 }
+      { zoom, duration: 500 }
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusRequest, nodes]);
 
   return (
@@ -63,13 +60,19 @@ export default function FamilyTreeCanvas({ onSelectPerson, focusRequest }: Props
         onInit={(instance) => {
           flowRef.current = instance;
         }}
-        onNodeClick={(_, node) => onSelectPerson(node.id)}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        panOnDrag={false}
+        panOnScroll
+        zoomOnScroll={false}
+        zoomOnPinch
+        zoomOnDoubleClick={false}
         fitView
         minZoom={0.1}
+        colorMode="system"
       >
         <Background />
-        <Controls />
-        <MiniMap pannable zoomable />
+        <Controls showInteractive={false} />
       </ReactFlow>
     </div>
   );

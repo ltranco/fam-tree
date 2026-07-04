@@ -6,12 +6,13 @@ import { fullName } from '@/lib/types';
 
 interface Props {
   onSelect: (id: string) => void;
+  onClose: () => void;
 }
 
-export default function SearchBar({ onSelect }: Props) {
+export default function SearchBar({ onSelect, onClose }: Props) {
   const { people } = useFamilyTree();
   const [query, setQuery] = useState('');
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
 
   const matches = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -30,6 +31,7 @@ export default function SearchBar({ onSelect }: Props) {
   return (
     <div className="search-bar">
       <input
+        autoFocus
         placeholder="Search by name…"
         value={query}
         onChange={(e) => {
@@ -38,6 +40,9 @@ export default function SearchBar({ onSelect }: Props) {
         }}
         onFocus={() => setOpen(true)}
         onBlur={() => setTimeout(() => setOpen(false), 150)}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape') onClose();
+        }}
       />
       {open && matches.length > 0 && (
         <ul className="search-bar__results">

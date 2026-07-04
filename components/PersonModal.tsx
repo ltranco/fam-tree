@@ -7,10 +7,10 @@ import { useFamilyTree } from '@/context/FamilyTreeContext';
 interface Props {
   personId: string;
   onClose: () => void;
-  onFocusPerson: (id: string) => void;
+  onNavigateToPerson: (id: string) => void;
 }
 
-export default function PersonModal({ personId, onClose, onFocusPerson }: Props) {
+export default function PersonModal({ personId, onClose, onNavigateToPerson }: Props) {
   const { people, updatePerson, addChild, addParent, deletePerson } = useFamilyTree();
   const person = people[personId];
   const [form, setForm] = useState<Person | null>(person ?? null);
@@ -44,12 +44,12 @@ export default function PersonModal({ personId, onClose, onFocusPerson }: Props)
 
   function handleAddChild() {
     const newId = addChild(personId);
-    onFocusPerson(newId);
+    onNavigateToPerson(newId);
   }
 
   function handleAddParent() {
     const newId = addParent(personId);
-    if (newId) onFocusPerson(newId);
+    if (newId) onNavigateToPerson(newId);
   }
 
   function handleDelete() {
@@ -96,10 +96,8 @@ export default function PersonModal({ personId, onClose, onFocusPerson }: Props)
             <label>
               Gender
               <select value={form.gender} onChange={(e) => handleChange('gender', e.target.value as Person['gender'])}>
-                <option value="">Unspecified</option>
                 <option value="female">Female</option>
                 <option value="male">Male</option>
-                <option value="other">Other</option>
               </select>
             </label>
           </div>
@@ -114,7 +112,7 @@ export default function PersonModal({ personId, onClose, onFocusPerson }: Props)
               />
             </label>
             <label>
-              Death date
+              Passing date
               <input
                 type="date"
                 value={form.deathDate}
@@ -146,7 +144,7 @@ export default function PersonModal({ personId, onClose, onFocusPerson }: Props)
               Parents:{' '}
               {parents.map((parent, i) => (
                 <span key={parent.id}>
-                  <button className="link-button" onClick={() => onFocusPerson(parent.id)}>
+                  <button className="link-button" onClick={() => onNavigateToPerson(parent.id)}>
                     {parent.firstName} {parent.lastName}
                   </button>
                   {i < parents.length - 1 ? ', ' : ''}

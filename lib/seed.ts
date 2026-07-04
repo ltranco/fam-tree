@@ -2,7 +2,7 @@ import { FamilyTreeData, Person } from './types';
 
 function p(partial: Partial<Person> & Pick<Person, 'id' | 'firstName' | 'lastName'>): Person {
   return {
-    gender: '',
+    gender: 'female',
     birthDate: '',
     deathDate: '',
     photoUrl: '',

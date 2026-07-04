@@ -26,7 +26,7 @@ function emptyPerson(id: string, parentIds: string[] = []): Person {
     id,
     firstName: 'New',
     lastName: 'Person',
-    gender: '',
+    gender: 'male',
     birthDate: '',
     deathDate: '',
     photoUrl: '',
