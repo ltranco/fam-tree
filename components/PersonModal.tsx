@@ -44,11 +44,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
     updatePerson(personId, {
       firstName: form.firstName,
       lastName: form.lastName,
-      gender: form.gender,
-      birthDate: form.birthDate,
-      deathDate: form.deathDate,
       photoUrl: form.photoUrl,
-      notes: form.notes,
     });
     onClose();
   }
@@ -110,41 +106,6 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
             </label>
           </div>
 
-          <div className="form-row">
-            <label>
-              Gender
-              <select
-                value={form.gender}
-                disabled={!canEdit}
-                onChange={(e) => handleChange('gender', e.target.value as Person['gender'])}
-              >
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-              </select>
-            </label>
-          </div>
-
-          <div className="form-row">
-            <label>
-              Birth date
-              <input
-                type="date"
-                value={form.birthDate}
-                disabled={!canEdit}
-                onChange={(e) => handleChange('birthDate', e.target.value)}
-              />
-            </label>
-            <label>
-              Passing date
-              <input
-                type="date"
-                value={form.deathDate}
-                disabled={!canEdit}
-                onChange={(e) => handleChange('deathDate', e.target.value)}
-              />
-            </label>
-          </div>
-
           <label className="form-full">
             Photo URL
             <input
@@ -152,16 +113,6 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               placeholder="https://..."
               disabled={!canEdit}
               onChange={(e) => handleChange('photoUrl', e.target.value)}
-            />
-          </label>
-
-          <label className="form-full">
-            Notes
-            <textarea
-              value={form.notes}
-              rows={3}
-              disabled={!canEdit}
-              onChange={(e) => handleChange('notes', e.target.value)}
             />
           </label>
 
@@ -212,11 +163,11 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
 
         {canEdit && (
           <div className="modal__actions">
-            <button onClick={handleAddChild}>+ Add child</button>
+            <button onClick={handleAddChild}>+ Child</button>
             <button onClick={handleAddParent} disabled={form.parentIds.length >= 2}>
-              + Add parent
+              + Parent
             </button>
-            <button onClick={handleAddPartner}>+ Add partner</button>
+            <button onClick={handleAddPartner}>+ Partner</button>
             <button className="danger" onClick={handleDelete}>
               Delete
             </button>

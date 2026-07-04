@@ -13,12 +13,6 @@ function initials(person: Person): string {
   return (a + b).toUpperCase() || '?';
 }
 
-function yearOf(dateStr: string): string {
-  if (!dateStr) return '';
-  const year = dateStr.slice(0, 4);
-  return /^\d{4}$/.test(year) ? year : '';
-}
-
 interface PersonNodeData {
   person: Person;
   onEdit: (id: string) => void;
@@ -31,9 +25,6 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
   const { person, onEdit, hasPartnerSourceHandle, hasPartnerTargetHandle, hasChildSourceHandle } = data;
   const { people, addChild, addParent, addPartner, deletePerson } = useFamilyTree();
   const { canEdit } = useAuth();
-  const birthYear = yearOf(person.birthDate);
-  const deathYear = yearOf(person.deathDate);
-  const dateRange = birthYear || deathYear ? `${birthYear || '?'} – ${deathYear || (birthYear ? 'present' : '?')}` : '';
   const childCount = Object.values(people).filter((p) => p.parentIds.includes(person.id)).length;
 
   function handleDelete() {
@@ -65,7 +56,6 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
       </div>
       <div className="person-node__info">
         <div className="person-node__name">{fullName(person) || 'Unnamed'}</div>
-        {dateRange && <div className="person-node__dates">{dateRange}</div>}
       </div>
       {hasChildSourceHandle && <Handle type="source" position={Position.Bottom} id="child-source" />}
 

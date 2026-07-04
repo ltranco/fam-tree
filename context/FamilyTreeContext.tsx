@@ -30,11 +30,7 @@ function emptyPerson(id: string, parentIds: string[] = [], order = 0): Person {
     id,
     firstName: 'New',
     lastName: 'Person',
-    gender: 'male',
-    birthDate: '',
-    deathDate: '',
     photoUrl: '',
-    notes: '',
     parentIds,
     order,
   };

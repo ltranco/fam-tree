@@ -247,11 +247,6 @@ button:disabled {
   color: var(--text-primary);
 }
 
-.person-node__dates {
-  font-size: 0.78rem;
-  color: var(--text-secondary);
-}
-
 .person-node__quickmenu {
   position: absolute;
   top: calc(100% + 8px);

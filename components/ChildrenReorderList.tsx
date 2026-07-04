@@ -81,7 +81,7 @@ export default function ChildrenReorderList({ parentId, onNavigateToPerson }: Pr
 
   return (
     <div className="modal__children">
-      <div className="modal__children-label">Children (drag to reorder)</div>
+      <div className="modal__children-label">Children</div>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={children.map((c) => c.id)} strategy={verticalListSortingStrategy}>
           {children.map((child) => (
