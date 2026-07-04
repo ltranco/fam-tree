@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { FamilyTreeData, Partnership, PartnershipStatus, Person } from '@/lib/types';
 import { loadTree, saveTree } from '@/lib/storage';
 import { wouldCreateCycle } from '@/lib/relationships';
@@ -58,17 +58,34 @@ export function FamilyTreeProvider({ children }: { children: React.ReactNode }) 
   const [people, setPeople] = useState<Record<string, Person>>({});
   const [partnerships, setPartnerships] = useState<Partnership[]>([]);
   const [ready, setReady] = useState(false);
+  // Loading the tree sets `people`/`partnerships` too, which would otherwise
+  // look like a real edit to the save effect below and fire a doomed write
+  // for every viewer who doesn't hold the edit password.
+  const skipNextSaveRef = useRef(true);
 
   useEffect(() => {
-    const data = loadTree();
-    setPeople(data.people);
-    setPartnerships(data.partnerships);
-    setReady(true);
+    let cancelled = false;
+    loadTree()
+      .then((data) => {
+        if (cancelled) return;
+        skipNextSaveRef.current = true;
+        setPeople(data.people);
+        setPartnerships(data.partnerships);
+        setReady(true);
+      })
+      .catch((err) => console.error('Failed to load family tree data:', err));
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (!ready) return;
-    saveTree({ people, partnerships });
+    if (skipNextSaveRef.current) {
+      skipNextSaveRef.current = false;
+      return;
+    }
+    saveTree({ people, partnerships }).catch((err) => console.error('Failed to save family tree data:', err));
   }, [people, partnerships, ready]);
 
   const updatePerson = useCallback((id: string, updates: Partial<Omit<Person, 'id' | 'parentIds'>>) => {

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Partnership, Person } from '@/lib/types';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
+import { useAuth } from '@/context/AuthContext';
 import ChildrenReorderList from './ChildrenReorderList';
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
 export default function PersonModal({ personId, onClose, onNavigateToPerson }: Props) {
   const { people, partnerships, updatePerson, addChild, addParent, addPartner, setPartnershipStatus, deletePerson } =
     useFamilyTree();
+  const { canEdit } = useAuth();
   const person = people[personId];
   const [form, setForm] = useState<Person | null>(person ?? null);
 
@@ -82,7 +84,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal__header">
-          <h2>Edit Person</h2>
+          <h2>{canEdit ? 'Edit Person' : 'Person'}</h2>
           <button className="modal__close" onClick={onClose} aria-label="Close">
             ×
           </button>
@@ -94,6 +96,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               First name
               <input
                 value={form.firstName}
+                disabled={!canEdit}
                 onChange={(e) => handleChange('firstName', e.target.value)}
               />
             </label>
@@ -101,6 +104,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               Last name
               <input
                 value={form.lastName}
+                disabled={!canEdit}
                 onChange={(e) => handleChange('lastName', e.target.value)}
               />
             </label>
@@ -109,7 +113,11 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
           <div className="form-row">
             <label>
               Gender
-              <select value={form.gender} onChange={(e) => handleChange('gender', e.target.value as Person['gender'])}>
+              <select
+                value={form.gender}
+                disabled={!canEdit}
+                onChange={(e) => handleChange('gender', e.target.value as Person['gender'])}
+              >
                 <option value="female">Female</option>
                 <option value="male">Male</option>
               </select>
@@ -122,6 +130,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               <input
                 type="date"
                 value={form.birthDate}
+                disabled={!canEdit}
                 onChange={(e) => handleChange('birthDate', e.target.value)}
               />
             </label>
@@ -130,6 +139,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
               <input
                 type="date"
                 value={form.deathDate}
+                disabled={!canEdit}
                 onChange={(e) => handleChange('deathDate', e.target.value)}
               />
             </label>
@@ -140,6 +150,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
             <input
               value={form.photoUrl}
               placeholder="https://..."
+              disabled={!canEdit}
               onChange={(e) => handleChange('photoUrl', e.target.value)}
             />
           </label>
@@ -149,6 +160,7 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
             <textarea
               value={form.notes}
               rows={3}
+              disabled={!canEdit}
               onChange={(e) => handleChange('notes', e.target.value)}
             />
           </label>
@@ -178,16 +190,18 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
                   <span className={`partner-status${partnership.status === 'divorced' ? ' partner-status--divorced' : ''}`}>
                     {partnership.status === 'divorced' ? 'Divorced' : 'Together'}
                   </span>
-                  <button
-                    onClick={() =>
-                      setPartnershipStatus(
-                        partnership.id,
-                        partnership.status === 'divorced' ? 'together' : 'divorced'
-                      )
-                    }
-                  >
-                    {partnership.status === 'divorced' ? 'Mark together' : 'Mark divorced'}
-                  </button>
+                  {canEdit && (
+                    <button
+                      onClick={() =>
+                        setPartnershipStatus(
+                          partnership.id,
+                          partnership.status === 'divorced' ? 'together' : 'divorced'
+                        )
+                      }
+                    >
+                      {partnership.status === 'divorced' ? 'Mark together' : 'Mark divorced'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -196,22 +210,26 @@ export default function PersonModal({ personId, onClose, onNavigateToPerson }: P
           <ChildrenReorderList parentId={personId} onNavigateToPerson={onNavigateToPerson} />
         </div>
 
-        <div className="modal__actions">
-          <button onClick={handleAddChild}>+ Add child</button>
-          <button onClick={handleAddParent} disabled={form.parentIds.length >= 2}>
-            + Add parent
-          </button>
-          <button onClick={handleAddPartner}>+ Add partner</button>
-          <button className="danger" onClick={handleDelete}>
-            Delete
-          </button>
-        </div>
+        {canEdit && (
+          <div className="modal__actions">
+            <button onClick={handleAddChild}>+ Add child</button>
+            <button onClick={handleAddParent} disabled={form.parentIds.length >= 2}>
+              + Add parent
+            </button>
+            <button onClick={handleAddPartner}>+ Add partner</button>
+            <button className="danger" onClick={handleDelete}>
+              Delete
+            </button>
+          </div>
+        )}
 
         <div className="modal__footer">
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={handleSave}>
-            Save
-          </button>
+          <button onClick={onClose}>{canEdit ? 'Cancel' : 'Close'}</button>
+          {canEdit && (
+            <button className="primary" onClick={handleSave}>
+              Save
+            </button>
+          )}
         </div>
       </div>
     </div>

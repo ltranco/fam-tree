@@ -1,37 +1,20 @@
 import { FamilyTreeData } from './types';
-import { getSeedData } from './seed';
 
-const STORAGE_KEY = 'fam-tree-data';
-
-export function loadTree(): FamilyTreeData {
-  if (typeof window === 'undefined') {
-    return getSeedData();
-  }
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) {
-    const seed = getSeedData();
-    saveTree(seed);
-    return seed;
-  }
-  try {
-    const parsed = JSON.parse(raw) as FamilyTreeData;
-    if (!parsed || typeof parsed !== 'object' || !parsed.people) {
-      throw new Error('Invalid tree data shape');
-    }
-    if (!Array.isArray(parsed.partnerships)) {
-      parsed.partnerships = [];
-    }
-    return parsed;
-  } catch {
-    const seed = getSeedData();
-    saveTree(seed);
-    return seed;
-  }
+export async function loadTree(): Promise<FamilyTreeData> {
+  const res = await fetch('/api/tree');
+  if (!res.ok) throw new Error('Failed to load family tree data.');
+  const data = (await res.json()) as FamilyTreeData;
+  if (!Array.isArray(data.partnerships)) data.partnerships = [];
+  return data;
 }
 
-export function saveTree(data: FamilyTreeData): void {
-  if (typeof window === 'undefined') return;
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+export async function saveTree(data: FamilyTreeData): Promise<void> {
+  const res = await fetch('/api/tree', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to save family tree data.');
 }
 
 export function exportTreeAsFile(data: FamilyTreeData): void {

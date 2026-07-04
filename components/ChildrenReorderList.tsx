@@ -5,6 +5,7 @@ import { DndContext, DragEndEvent, PointerSensor, closestCenter, useSensor, useS
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
+import { useAuth } from '@/context/AuthContext';
 import { Person } from '@/lib/types';
 
 interface RowProps {
@@ -44,6 +45,7 @@ interface Props {
 
 export default function ChildrenReorderList({ parentId, onNavigateToPerson }: Props) {
   const { people, reorderChildren } = useFamilyTree();
+  const { canEdit } = useAuth();
   const children = Object.values(people)
     .filter((p) => p.parentIds.includes(parentId))
     .sort((a, b) => a.order - b.order);
@@ -60,6 +62,21 @@ export default function ChildrenReorderList({ parentId, onNavigateToPerson }: Pr
     const newIndex = ids.indexOf(String(over.id));
     if (oldIndex === -1 || newIndex === -1) return;
     reorderChildren(parentId, arrayMove(ids, oldIndex, newIndex));
+  }
+
+  if (!canEdit) {
+    return (
+      <div className="modal__children">
+        <div className="modal__children-label">Children</div>
+        {children.map((child) => (
+          <div key={child.id} className="children-reorder__row">
+            <button className="link-button" onClick={() => onNavigateToPerson(child.id)}>
+              {child.firstName} {child.lastName}
+            </button>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

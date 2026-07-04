@@ -3,17 +3,21 @@
 import React, { useEffect, useState } from 'react';
 import { ReactFlowProvider } from '@xyflow/react';
 import { FamilyTreeProvider, useFamilyTree } from '@/context/FamilyTreeContext';
+import { AuthProvider, useAuth } from '@/context/AuthContext';
 import FamilyTreeCanvas, { FocusRequest } from './FamilyTreeCanvas';
 import PersonModal from './PersonModal';
 import SearchBar from './SearchBar';
 import DataModal from './DataModal';
+import UnlockModal from './UnlockModal';
 
 function FamilyTreeAppInner() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [focusRequest, setFocusRequest] = useState<FocusRequest | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [dataModalOpen, setDataModalOpen] = useState(false);
+  const [unlockOpen, setUnlockOpen] = useState(false);
   const { ready } = useFamilyTree();
+  const { canEdit } = useAuth();
 
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
@@ -47,6 +51,7 @@ function FamilyTreeAppInner() {
           Search
         </button>
         <button onClick={() => setDataModalOpen(true)}>JSON</button>
+        {!canEdit && <button onClick={() => setUnlockOpen(true)}>🔒 Edit</button>}
       </div>
 
       {searchOpen && (
@@ -70,16 +75,20 @@ function FamilyTreeAppInner() {
       )}
 
       {dataModalOpen && <DataModal onClose={() => setDataModalOpen(false)} />}
+
+      {unlockOpen && <UnlockModal onClose={() => setUnlockOpen(false)} />}
     </div>
   );
 }
 
 export default function FamilyTreeApp() {
   return (
-    <FamilyTreeProvider>
-      <ReactFlowProvider>
-        <FamilyTreeAppInner />
-      </ReactFlowProvider>
-    </FamilyTreeProvider>
+    <AuthProvider>
+      <FamilyTreeProvider>
+        <ReactFlowProvider>
+          <FamilyTreeAppInner />
+        </ReactFlowProvider>
+      </FamilyTreeProvider>
+    </AuthProvider>
   );
 }

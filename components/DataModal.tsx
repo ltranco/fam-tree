@@ -2,6 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
+import { useAuth } from '@/context/AuthContext';
 import { exportTreeAsFile, parseImportedTree } from '@/lib/storage';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 
 export default function DataModal({ onClose }: Props) {
   const { people, partnerships, replaceAll } = useFamilyTree();
+  const { canEdit } = useAuth();
   const [text, setText] = useState(() => JSON.stringify({ people, partnerships }, null, 2));
   const [error, setError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +58,7 @@ export default function DataModal({ onClose }: Props) {
             className="json-editor"
             value={text}
             spellCheck={false}
+            readOnly={!canEdit}
             onChange={(e) => {
               setText(e.target.value);
               setError('');
@@ -66,15 +69,17 @@ export default function DataModal({ onClose }: Props) {
 
         <div className="modal__actions">
           <button onClick={handleDownload}>Download</button>
-          <button onClick={handleLoadFileClick}>Load file…</button>
+          {canEdit && <button onClick={handleLoadFileClick}>Load file…</button>}
           <input ref={fileInputRef} type="file" accept="application/json" hidden onChange={handleFileChange} />
         </div>
 
         <div className="modal__footer">
-          <button onClick={onClose}>Cancel</button>
-          <button className="primary" onClick={handleApply}>
-            Apply
-          </button>
+          <button onClick={onClose}>{canEdit ? 'Cancel' : 'Close'}</button>
+          {canEdit && (
+            <button className="primary" onClick={handleApply}>
+              Apply
+            </button>
+          )}
         </div>
       </div>
     </div>

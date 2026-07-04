@@ -5,6 +5,7 @@ import { Handle, Position } from '@xyflow/react';
 import { Person, fullName } from '@/lib/types';
 import { NODE_WIDTH, NODE_HEIGHT } from '@/lib/layout';
 import { useFamilyTree } from '@/context/FamilyTreeContext';
+import { useAuth } from '@/context/AuthContext';
 
 function initials(person: Person): string {
   const a = person.firstName.trim()[0] ?? '';
@@ -29,6 +30,7 @@ interface PersonNodeData {
 export default function PersonNode({ data, selected }: { data: PersonNodeData; selected: boolean }) {
   const { person, onEdit, hasPartnerSourceHandle, hasPartnerTargetHandle, hasChildSourceHandle } = data;
   const { people, addChild, addParent, addPartner, deletePerson } = useFamilyTree();
+  const { canEdit } = useAuth();
   const birthYear = yearOf(person.birthDate);
   const deathYear = yearOf(person.deathDate);
   const dateRange = birthYear || deathYear ? `${birthYear || '?'} – ${deathYear || (birthYear ? 'present' : '?')}` : '';
@@ -69,25 +71,29 @@ export default function PersonNode({ data, selected }: { data: PersonNodeData; s
 
       {selected && (
         <div className="person-node__quickmenu nodrag nopan" onClick={(e) => e.stopPropagation()}>
-          <button title="Edit details" onClick={() => onEdit(person.id)}>
-            Edit
+          <button title="View details" onClick={() => onEdit(person.id)}>
+            {canEdit ? 'Edit' : 'View'}
           </button>
-          <button title="Add child" onClick={() => addChild(person.id)}>
-            + Child
-          </button>
-          <button
-            title="Add parent"
-            disabled={person.parentIds.length >= 2}
-            onClick={() => addParent(person.id)}
-          >
-            + Parent
-          </button>
-          <button title="Add partner" onClick={() => addPartner(person.id)}>
-            + Partner
-          </button>
-          <button title="Delete" className="danger" onClick={handleDelete}>
-            Delete
-          </button>
+          {canEdit && (
+            <>
+              <button title="Add child" onClick={() => addChild(person.id)}>
+                + Child
+              </button>
+              <button
+                title="Add parent"
+                disabled={person.parentIds.length >= 2}
+                onClick={() => addParent(person.id)}
+              >
+                + Parent
+              </button>
+              <button title="Add partner" onClick={() => addPartner(person.id)}>
+                + Partner
+              </button>
+              <button title="Delete" className="danger" onClick={handleDelete}>
+                Delete
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
