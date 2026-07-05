@@ -63,7 +63,7 @@ export default function FamilyTreeCanvas({ onEditPerson, focusRequest }: Props) 
         }}
         nodesDraggable={false}
         nodesConnectable={false}
-        panOnDrag={false}
+        panOnDrag
         panOnScroll
         zoomOnScroll={false}
         zoomOnPinch
