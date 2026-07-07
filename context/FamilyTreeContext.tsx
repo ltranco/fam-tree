@@ -43,11 +43,16 @@ function nextSiblingOrder(people: Record<string, Person>, parentId: string): num
   return siblingOrders.length ? Math.max(...siblingOrders) + 1 : 0;
 }
 
-/** The one unambiguous current partner to attach a new child to, if any. */
+/**
+ * The one unambiguous partner to attach a new child to, if any. Divorced
+ * counts too — a divorced couple is still the correct co-parent to reuse
+ * for an existing family, e.g. adding another already-born child on record.
+ * Only ambiguity (0 or 2+ partnerships) falls back to creating a new one.
+ */
 function currentPartnerId(partnerships: Partnership[], personId: string): string | null {
-  const together = partnerships.filter((p) => p.partnerIds.includes(personId) && p.status === 'together');
-  if (together.length !== 1) return null;
-  return together[0].partnerIds.find((id) => id !== personId) ?? null;
+  const involved = partnerships.filter((p) => p.partnerIds.includes(personId));
+  if (involved.length !== 1) return null;
+  return involved[0].partnerIds.find((id) => id !== personId) ?? null;
 }
 
 export function FamilyTreeProvider({ children }: { children: React.ReactNode }) {
